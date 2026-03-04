@@ -95,4 +95,45 @@ const chatWithEngine = async (req, res) => {
     }
 };
 
-module.exports = { ingestData, chatWithEngine };
+const deleteKnowledgeBase = async (req, res) => {
+    const kbId = req.params.id;
+    const userId = req.session.userId;
+    const customerId = `user_${userId}`;
+    const pythonEngineUrl = process.env.PYTHON_ENGINE_URL || 'http://127.0.0.1:8000';
+
+    try {
+        const kbResult = await pool.query(
+            'SELECT scraped_url FROM knowledge_bases WHERE id = $1 AND user_id = $2',
+            [kbId, userId]
+        );
+
+        if (kbResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Knowledge base not found.' });
+        }
+
+        const targetUrl = kbResult.rows[0].scraped_url;
+
+        const engineResponse = await fetch(`${pythonEngineUrl}/api/delete?url=${encodeURIComponent(targetUrl)}&customer_id=${customerId}`, {
+            method: 'DELETE'
+        });
+
+        if (!engineResponse.ok) {
+            const errorData = await engineResponse.text();
+            console.error('---> Python Engine Rejected Deletion:', errorData);
+            throw new Error(`Python Engine Error: ${engineResponse.status}`);
+        }
+
+        await pool.query('DELETE FROM knowledge_bases WHERE id = $1', [kbId]);
+        res.status(200).json({ message: 'Knowledge base successfully deleted.' });
+
+    } catch (error) {
+        console.error('Deletion Error:', error);
+        res.status(500).json({ error: 'Failed to delete knowledge base.' });
+    }
+};
+
+module.exports = { 
+    ingestData, 
+    chatWithEngine,
+    deleteKnowledgeBase
+};
