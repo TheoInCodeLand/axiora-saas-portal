@@ -58,40 +58,84 @@ const ingestData = async (req, res) => {
 };
 
 const chatWithEngine = async (req, res) => {
-    const { userId, question, history } = req.body;
+    // 🔒 CRITICAL: Use session userId, NEVER trust body
+    const sessionUserId = req.session.userId;
+    if (!sessionUserId) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
     
-    const customerId = `user_${userId}`;
-    const pythonEngineUrl = process.env.PYTHON_ENGINE_URL || 'http://127.0.0.1:8000';
-
-    if (!question || !userId) {
-        return res.status(400).json({ error: 'Missing required chat parameters.' });
+    const { question, history } = req.body;
+    
+    // Validate question
+    if (!question || typeof question !== 'string') {
+        return res.status(400).json({ error: 'Invalid question format' });
+    }
+    
+    if (question.length > 1000) {
+        return res.status(400).json({ error: 'Question too long (max 1000 chars)' });
+    }
+    
+    // Validate history structure
+    if (history && !Array.isArray(history)) {
+        return res.status(400).json({ error: 'Invalid history format' });
+    }
+    
+    if (history && history.length > 50) {
+        return res.status(400).json({ error: 'History too long' });
     }
 
+    const customerId = `user_${sessionUserId}`;
+    const pythonEngineUrl = process.env.PYTHON_ENGINE_URL || 'http://127.0.0.1:8000';
+
     try {
+        // Add timeout and retry logic
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
         const engineResponse = await fetch(`${pythonEngineUrl}/api/chat`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Service-Secret': process.env.ENGINE_SECRET || ''  // Service auth
+            },
             body: JSON.stringify({
                 question: question,
-                customer_id: customerId,
+                customer_id: customerId,  // 🔒 From session, not user
                 history: history || []
-            })
+            }),
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
+
+        if (!engineResponse.ok) {
+            const errorText = await engineResponse.text();
+            throw new Error(`Engine error: ${engineResponse.status}`);
+        }
 
         const engineData = await engineResponse.json();
 
-        if (!engineResponse.ok) {
-            throw new Error(engineData.detail || 'The AI Engine failed to generate an answer.');
+        // Validate response has required fields
+        if (!engineData.answer) {
+            throw new Error('Invalid response from AI engine');
         }
 
-        res.status(200).json({ 
+        res.status(200).json({
             answer: engineData.answer,
-            sources_used: engineData.sources_used
+            phase: engineData.phase || 'UNKNOWN',
+            emotion_detected: engineData.emotion_detected || 'neutral',
+            confidence: engineData.confidence || 0,
+            rapport_score: engineData.rapport_score || 0,
+            sources_used: engineData.sources_used || 0
         });
 
     } catch (error) {
         console.error('Chat Proxy Error:', error);
-        res.status(500).json({ error: 'Axiora AI is currently unavailable. Please try again later.' });
+        
+        // Don't leak internal details
+        res.status(500).json({ 
+            error: 'AI service temporarily unavailable. Please try again in a moment.' 
+        });
     }
 };
 

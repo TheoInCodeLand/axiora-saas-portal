@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Axiora SaaS</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline'">
+    <title>Dashboard - Axiora AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans">
@@ -11,21 +12,25 @@
     <nav class="bg-slate-900 text-white p-4 shadow-md flex justify-between items-center">
         <h1 class="text-xl font-bold">Axiora Knowledge Engine</h1>
         <div class="flex items-center gap-4">
-            <span class="text-sm text-slate-300">Welcome, <%= username %></span>
+            <span class="text-sm text-slate-300">Welcome, <%= escapeHtml(username) %></span>
             <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-semibold transition">Log Out</button>
         </div>
     </nav>
 
     <main class="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
         
+        <!-- Column 1: Actions -->
         <div class="lg:col-span-1 flex flex-col gap-6">
             
+            <!-- Ingest Form -->
             <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
                 <h2 class="text-lg font-bold text-slate-800 mb-2">1. Feed the Engine</h2>
                 <p class="text-sm text-gray-500 mb-4">Add a new URL to train the AI.</p>
                 
                 <form id="ingestForm" class="flex flex-col gap-3">
-                    <input type="url" id="targetUrl" placeholder="https://..." required class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-600 outline-none">
+                    <input type="url" id="targetUrl" placeholder="https://..." required 
+                           pattern="https?://.*" 
+                           class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-600 outline-none">
                     <button type="submit" id="ingestBtn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition">
                         Ingest Data
                     </button>
@@ -33,20 +38,27 @@
                 <div id="ingestStatus" class="mt-3 text-sm hidden font-mono p-2 rounded bg-slate-100"></div>
             </div>
 
+            <!-- Secure Widget Embed -->
             <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
                 <h2 class="text-lg font-bold text-slate-800 mb-2">2. Embed the Widget</h2>
-                <p class="text-sm text-gray-500 mb-4">Paste this into the bottom of any HTML page.</p>
+                <p class="text-sm text-gray-500 mb-4">Secure script for your website.</p>
                 
-                <div class="relative">
-                    <textarea readonly class="w-full h-24 bg-slate-900 text-green-400 font-mono text-xs p-3 rounded outline-none resize-none overflow-hidden">
-                        <script src="http://localhost:3000/public/widget.js" data-user="<%= userId %>"></script>
-                    </textarea>
+                <div class="relative mb-4">
+                    <textarea readonly id="widgetCode" class="w-full h-24 bg-slate-900 text-green-400 font-mono text-xs p-3 rounded outline-none resize-none">&lt;script src="https://<%= domain %>/widget.js" data-token="<%= widgetToken %>" data-user="<%= userId %>"&gt;&lt;/script&gt;</textarea>
+                    <button onclick="copyWidgetCode()" class="absolute top-2 right-2 bg-slate-700 text-white text-xs px-2 py-1 rounded hover:bg-slate-600">Copy</button>
+                </div>
+                
+                <div class="flex items-center gap-2 text-xs text-gray-500">
+                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                    Token expires in 1 hour
+                    <button onclick="regenerateToken()" class="text-blue-600 hover:underline ml-auto">Regenerate</button>
                 </div>
             </div>
         </div>
 
-        <div class="lg:col-span-2">
-            <div class="bg-white p-6 rounded-xl shadow border border-gray-100 h-full">
+        <!-- Column 2: Knowledge Bases -->
+        <div class="lg:col-span-2 flex flex-col gap-6">
+            <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
                 <h2 class="text-lg font-bold text-slate-800 mb-4">Your Knowledge Bases</h2>
                 
                 <div class="overflow-x-auto">
@@ -62,24 +74,30 @@
                         <tbody>
                             <% if (knowledgeBases.length === 0) { %>
                                 <tr>
-                                    <td colspan="3" class="p-6 text-center text-gray-400 text-sm">No data sources added yet.</td>
+                                    <td colspan="4" class="p-6 text-center text-gray-400 text-sm">No data sources added yet.</td>
                                 </tr>
                             <% } else { %>
                                 <% knowledgeBases.forEach(function(kb) { %>
                                     <tr class="border-b border-gray-100 hover:bg-slate-50">
-                                        <td class="p-3 text-sm text-slate-800 truncate max-w-[200px]"><%= kb.scraped_url %></td>
+                                        <td class="p-3 text-sm text-slate-800 truncate max-w-[200px]" title="<%= escapeHtml(kb.scraped_url) %>">
+                                            <%= escapeHtml(kb.scraped_url) %>
+                                        </td>
                                         <td class="p-3">
                                             <span class="px-2 py-1 text-xs font-semibold rounded-full 
-                                                <%= kb.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' %>">
+                                                <%= kb.status === 'success' ? 'bg-green-100 text-green-700' : 
+                                                    kb.status === 'failed' ? 'bg-red-100 text-red-700' : 
+                                                    'bg-yellow-100 text-yellow-700' %>">
                                                 <%= kb.status.toUpperCase() %>
                                             </span>
                                         </td>
                                         <td class="p-3 text-sm text-gray-500"><%= new Date(kb.created_at).toLocaleDateString() %></td>
                                         <td class="p-3 text-right flex justify-end gap-2">
-                                            <button onclick="resyncUrl('<%= kb.scraped_url %>')" class="text-blue-600 hover:text-blue-800 text-sm font-semibold px-2 py-1 rounded hover:bg-blue-50 transition">
+                                            <button onclick="resyncUrl('<%= encodeURIComponent(kb.scraped_url) %>')" 
+                                                    class="text-blue-600 hover:text-blue-800 text-sm font-semibold px-2 py-1 rounded hover:bg-blue-50 transition">
                                                 Resync
                                             </button>
-                                            <button onclick="deleteKb('<%= kb.id %>')" class="text-red-600 hover:text-red-800 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50 transition">
+                                            <button onclick="deleteKb('<%= kb.id %>')" 
+                                                    class="text-red-600 hover:text-red-800 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50 transition">
                                                 Delete
                                             </button>
                                         </td>
@@ -90,29 +108,68 @@
                     </table>
                 </div>
             </div>
-        </div>
 
-        </div>
-            <div class="bg-white p-6 rounded-xl shadow border border-gray-100 mt-6 h-[400px] flex flex-col">
-                <h2 class="text-lg font-bold text-slate-800 mb-2">3. Test Playground</h2>
-                <p class="text-sm text-gray-500 mb-4">Interact with the AI engine using the ingested data.</p>
-                
-                <div class="border border-gray-200 rounded-lg overflow-hidden flex flex-col flex-1 bg-slate-50">
-                    <div id="testChatWindow" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3">
-                        <div class="bg-white border border-gray-200 text-slate-800 p-3 rounded-lg rounded-tl-none self-start max-w-[85%] shadow-sm text-sm">
-                            System Online. The database is connected. What would you like to know?
-                        </div>
+            <!-- Enhanced Test Playground -->
+            <div class="bg-white p-6 rounded-xl shadow border border-gray-100 h-[500px] flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">AI Test Playground</h2>
+                        <p class="text-sm text-gray-500">Test emotional states and conversation flows</p>
                     </div>
-                    <div class="p-3 bg-white border-t border-gray-200 flex gap-2">
-                        <input type="text" id="testChatInput" placeholder="Query the database..." autocomplete="off" class="flex-1 border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-600 outline-none text-sm">
-                        <button id="testChatBtn" class="bg-slate-900 text-white font-bold py-2 px-4 rounded hover:bg-slate-800 transition text-sm">Send</button>
+                    <div id="aiState" class="flex items-center gap-2 text-xs">
+                        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        <span class="text-slate-600">Ready</span>
                     </div>
                 </div>
+                
+                <!-- Debug Panel -->
+                <div id="debugPanel" class="bg-slate-900 text-green-400 font-mono text-xs p-3 rounded mb-3 hidden">
+                    <div class="flex justify-between mb-2">
+                        <span>CONVERSATION STATE</span>
+                        <button onclick="toggleDebug()" class="text-slate-400 hover:text-white">×</button>
+                    </div>
+                    <div id="debugContent">Phase: GREETING | Emotion: neutral | Confidence: 0.0 | Rapport: 0</div>
+                </div>
+                
+                <!-- Chat Window -->
+                <div id="testChatWindow" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3 bg-slate-50 rounded-lg border border-gray-200">
+                    <div class="bg-white border border-gray-200 text-slate-800 p-3 rounded-lg rounded-tl-none self-start max-w-[85%] shadow-sm text-sm">
+                        Hello! I'm Alex, your support consultant. I have access to all your documentation and I'm here to help. What can I do for you today?
+                    </div>
+                </div>
+                
+                <!-- Test Scenarios -->
+                <div class="flex gap-2 mt-3 overflow-x-auto pb-2">
+                    <button onclick="insertTest('angry')" class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs whitespace-nowrap hover:bg-red-200">😠 Angry</button>
+                    <button onclick="insertTest('confused')" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs whitespace-nowrap hover:bg-yellow-200">😕 Confused</button>
+                    <button onclick="insertTest('urgent')" class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs whitespace-nowrap hover:bg-orange-200">🚨 Urgent</button>
+                    <button onclick="insertTest('technical')" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs whitespace-nowrap hover:bg-blue-200">💻 Technical</button>
+                    <button onclick="toggleDebug()" class="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs whitespace-nowrap hover:bg-slate-200 ml-auto">🐛 Debug</button>
+                </div>
+                
+                <!-- Input -->
+                <div class="p-3 bg-white border-t border-gray-200 flex gap-2 mt-3 rounded-b-lg">
+                    <input type="text" id="testChatInput" placeholder="Test a scenario..." 
+                           class="flex-1 border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-600 outline-none text-sm"
+                           maxlength="1000">
+                    <button id="testChatBtn" class="bg-slate-900 text-white font-bold py-2 px-4 rounded hover:bg-slate-800 transition text-sm">
+                        Send
+                    </button>
+                </div>
+                
                 <input type="hidden" id="hiddenUserId" value="<%= userId %>">
             </div>
         </div>
     </main>
 
     <script src="/dashboardLogic.js"></script>
+    <script>
+        // Escape helper for any inline rendering
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
 </body>
 </html>
