@@ -1,0 +1,1 @@
+dashboard that orchestrates enterprise-grade web scraping and AI vectorization. It allows users to train custom LLMs on their own website data and provides a plug-and-play chat widget for instant customer support automation.
