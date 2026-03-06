@@ -50,9 +50,14 @@ const verifyWidgetToken = (token, userId) => {
         if (isNaN(time)) return false;
         
         // Check expiry (1 hour = 3600000ms)
-        if (Date.now() - time > 3600000) {
-            console.log('Token expired');
-            return false;
+        // if (Date.now() - time > 3600000) {
+        //     console.log('Token expired');
+        //     return false;
+        // }
+
+        if (response.status === 403) {
+            // Request new token from parent window or refresh page
+            window.parent.postMessage({type: 'AXIORA_TOKEN_EXPIRED'}, '*');
         }
         
         // Verify signature

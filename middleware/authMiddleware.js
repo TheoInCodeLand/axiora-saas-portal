@@ -6,6 +6,15 @@ const requireAuth = (req, res, next) => {
     }
 };
 
+const serviceAuth = (req, res, next) => {
+    const secret = req.headers['x-service-secret'];
+    if (secret !== process.env.ENGINE_SECRET) {
+        return res.status(403).json({ error: 'Invalid service authentication' });
+    }
+    next();
+};
+
 module.exports = {
-    requireAuth
+    requireAuth,
+    serviceAuth
 };

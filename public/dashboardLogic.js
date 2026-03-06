@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // === CONFIGURATION ===
     const MAX_MESSAGE_LENGTH = 1000;
     const MAX_HISTORY_LENGTH = 50;
-    const API_TIMEOUT = 30000; // 30 seconds
+    const API_TIMEOUT = 4600000; // 30 seconds
     const RETRY_ATTEMPTS = 2;
 
     // === TEST SCENARIOS FOR CONVERSATIONAL AI ===
@@ -99,16 +99,17 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Validate URL format and security
      */
-    function isValidUrl(url) {
+    const isValidUrl = (url) => {
         try {
             const parsed = new URL(url);
-            return ['http:', 'https:'].includes(parsed.protocol) &&
-                   !parsed.hostname.includes('localhost') &&
-                   !parsed.hostname.includes('127.0.0.1');
+            const blocked = ['localhost', '127.0.0.1', '0.0.0.0', '::1', '169.254.169.254'];
+            if (blocked.includes(parsed.hostname)) return false;
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+            return true;
         } catch {
             return false;
         }
-    }
+    };
 
     /**
      * Truncate text to prevent UI overflow

@@ -29,7 +29,8 @@ app.use(session({
     cookie: {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production'
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
     }
 }));
 
@@ -41,6 +42,17 @@ app.get('/', (req, res) => {
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/engine', require('./routes/engineRoutes'));
 app.use('/dashboard', require('./routes/dashboardRoutes'));
+
+app.post('/webhook/ingest', express.raw({type: 'application/json'}), async (req, res) => {
+    const { job_id, customer_id, status, data } = JSON.parse(req.body);
+    await pool.query(
+        `UPDATE knowledge_bases SET status = $1, updated_at = NOW() 
+         WHERE pinecone_namespace = $2 AND status = 'pending'`,
+        [status === 'completed' ? 'success' : 'failed', customer_id]
+    );
+    
+    res.status(200).send('OK');
+});
 
 app.listen(PORT, () => {
     console.log(`SaaS Portal running on http://localhost:${PORT}`);

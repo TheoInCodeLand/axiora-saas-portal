@@ -3,103 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' <%= domain %>; img-src 'self' data: https:;">
+    <meta name="robots" content="noindex, nofollow">
     <title>Dashboard - Axiora AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .progress-bar { transition: width 0.5s ease-in-out; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    </style>
 </head>
-<body class="bg-slate-50 min-h-screen font-sans">
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800">
 
-    <nav class="bg-slate-900 text-white p-4 shadow-md flex justify-between items-center">
-        <h1 class="text-xl font-bold">Axiora Knowledge Engine</h1>
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
+
+    <nav class="bg-slate-900 text-white p-4 shadow-lg flex justify-between items-center sticky top-0 z-40">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight">Axiora AI</h1>
+                <p class="text-xs text-slate-400">Enterprise Knowledge Engine</p>
+            </div>
+        </div>
         <div class="flex items-center gap-4">
-            <span class="text-sm text-slate-300">Welcome, <%= escapeHtml(username) %></span>
-            <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-semibold transition">Log Out</button>
+            <div class="hidden sm:flex items-center gap-2 text-sm text-slate-300">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span><%= escapeHtml(username) %></span>
+            </div>
+            <button id="logoutBtn" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                Log Out
+            </button>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
+    <main class="max-w-7xl mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 mt-4">
         
-        <!-- Column 1: Actions -->
-        <div class="lg:col-span-1 flex flex-col gap-6">
+        <!-- Left Column: Actions (4 cols) -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
             
             <!-- Ingest Form -->
-            <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
-                <h2 class="text-lg font-bold text-slate-800 mb-2">1. Feed the Engine</h2>
-                <p class="text-sm text-gray-500 mb-4">Add a new URL to train the AI.</p>
-                
-                <form id="ingestForm" class="flex flex-col gap-3">
-                    <input type="url" id="targetUrl" placeholder="https://..." required 
-                           pattern="https?://.*" 
-                           class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-600 outline-none">
-                    <button type="submit" id="ingestBtn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition">
-                        Ingest Data
-                    </button>
-                </form>
-                <div id="ingestStatus" class="mt-3 text-sm hidden font-mono p-2 rounded bg-slate-100"></div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-4">
+                    <h2 class="text-white font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        Feed the Engine
+                    </h2>
+                </div>
+                <div class="p-5">
+                    <p class="text-sm text-gray-600 mb-4">Add a website to train the AI assistant.</p>
+                    
+                    <form id="ingestForm" class="flex flex-col gap-3">
+                        <div class="relative">
+                            <input type="url" id="targetUrl" placeholder="https://example.com/docs" required 
+                                   pattern="https?://.*" 
+                                   class="w-full border border-gray-300 p-3 pl-10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+                                   autocomplete="off">
+                            <svg class="w-5 h-5 text-gray-400 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                        </div>
+                        
+                        <div class="flex gap-2">
+                            <select id="maxPages" class="border border-gray-300 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-1/3">
+                                <option value="50">50 pages</option>
+                                <option value="100" selected>100 pages</option>
+                                <option value="250">250 pages</option>
+                                <option value="500">500 pages</option>
+                            </select>
+                            <button type="submit" id="ingestBtn" class="flex-1 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span id="ingestBtnText">Start Ingestion</span>
+                                <svg id="ingestBtnIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Progress Panel (Hidden by default) -->
+                    <div id="ingestProgress" class="hidden mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-slate-700" id="progressStatus">Initializing...</span>
+                            <span class="text-xs text-slate-500" id="progressPercent">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2 mb-3">
+                            <div id="progressBar" class="bg-blue-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-slate-500">
+                            <span id="pagesFound">0 pages found</span>
+                            <span id="chunksCreated">0 chunks</span>
+                        </div>
+                        <button id="cancelIngestBtn" class="mt-3 text-xs text-red-600 hover:text-red-800 font-medium">Cancel Job</button>
+                    </div>
+
+                    <!-- Status Message -->
+                    <div id="ingestStatus" class="hidden mt-3 text-sm p-3 rounded-lg flex items-start gap-2">
+                        <span id="statusIcon"></span>
+                        <span id="statusText"></span>
+                    </div>
+                </div>
             </div>
 
-            <!-- Secure Widget Embed -->
-            <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
-                <h2 class="text-lg font-bold text-slate-800 mb-2">2. Embed the Widget</h2>
-                <p class="text-sm text-gray-500 mb-4">Secure script for your website.</p>
-                
-                <div class="relative mb-4">
-                    <textarea readonly id="widgetCode" class="w-full h-24 bg-slate-900 text-green-400 font-mono text-xs p-3 rounded outline-none resize-none">&lt;script src="https://<%= domain %>/widget.js" data-token="<%= widgetToken %>" data-user="<%= userId %>"&gt;&lt;/script&gt;</textarea>
-                    <button onclick="copyWidgetCode()" class="absolute top-2 right-2 bg-slate-700 text-white text-xs px-2 py-1 rounded hover:bg-slate-600">Copy</button>
+            <!-- Widget Embed -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-slate-800 to-slate-900 p-4">
+                    <h2 class="text-white font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                        Embed Widget
+                    </h2>
                 </div>
-                
-                <div class="flex items-center gap-2 text-xs text-gray-500">
-                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-                    Token expires in 1 hour
-                    <button onclick="regenerateToken()" class="text-blue-600 hover:underline ml-auto">Regenerate</button>
+                <div class="p-5">
+                    <p class="text-sm text-gray-600 mb-4">Add this script to your website's &lt;head&gt;.</p>
+                    
+                    <div class="relative mb-4 group">
+                        <textarea readonly id="widgetCode" class="w-full h-28 bg-slate-900 text-green-400 font-mono text-xs p-3 rounded-lg outline-none resize-none focus:ring-2 focus:ring-blue-500">&lt;script src="https://<%= domain %>/widget.js" data-token="<%= widgetToken %>" data-user="<%= userId %>"&gt;&lt;/script&gt;</textarea>
+                        <button onclick="copyWidgetCode()" class="absolute top-2 right-2 bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1.5 rounded-md transition flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            Copy
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                            <span class="text-gray-500">Token expires: <span id="tokenExpiry" class="font-medium text-slate-700">59:00</span></span>
+                        </div>
+                        <button onclick="regenerateToken()" class="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h3 class="font-semibold text-slate-800 mb-3 text-sm uppercase tracking-wider">Quick Stats</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center p-3 bg-slate-50 rounded-lg">
+                        <div class="text-2xl font-bold text-blue-600" id="statTotalKb"><%= knowledgeBases.length %></div>
+                        <div class="text-xs text-gray-500 mt-1">Knowledge Bases</div>
+                    </div>
+                    <div class="text-center p-3 bg-slate-50 rounded-lg">
+                        <div class="text-2xl font-bold text-green-600" id="statActiveKb">
+                            <%= knowledgeBases.filter(kb => kb.status === 'success').length %>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">Active</div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Column 2: Knowledge Bases -->
-        <div class="lg:col-span-2 flex flex-col gap-6">
-            <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
-                <h2 class="text-lg font-bold text-slate-800 mb-4">Your Knowledge Bases</h2>
+        <!-- Right Column: Knowledge Bases & Chat (8 cols) -->
+        <div class="lg:col-span-8 flex flex-col gap-6">
+            
+            <!-- Knowledge Bases Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-5 border-b border-gray-200 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">Knowledge Bases</h2>
+                        <p class="text-sm text-gray-500 mt-1">Manage your data sources</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="refreshTable()" class="p-2 text-gray-400 hover:text-blue-600 transition" title="Refresh">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        </button>
+                    </div>
+                </div>
                 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-50 border-b border-gray-200">
-                                <th class="p-3 text-sm font-semibold text-slate-600">URL Source</th>
-                                <th class="p-3 text-sm font-semibold text-slate-600">Status</th>
-                                <th class="p-3 text-sm font-semibold text-slate-600">Date Added</th>
-                                <th class="p-3 text-sm font-semibold text-slate-600 text-right">Actions</th>
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="p-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">Source URL</th>
+                                <th class="p-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
+                                <th class="p-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">Progress</th>
+                                <th class="p-4 text-xs font-semibold text-slate-600 uppercase tracking-wider text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="kbTableBody" class="divide-y divide-gray-100">
                             <% if (knowledgeBases.length === 0) { %>
                                 <tr>
-                                    <td colspan="4" class="p-6 text-center text-gray-400 text-sm">No data sources added yet.</td>
+                                    <td colspan="4" class="p-8 text-center">
+                                        <div class="flex flex-col items-center gap-3 text-gray-400">
+                                            <svg class="w-12 h-12 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                            <p class="text-sm">No knowledge bases yet. Add your first URL!</p>
+                                        </div>
+                                    </td>
                                 </tr>
                             <% } else { %>
                                 <% knowledgeBases.forEach(function(kb) { %>
-                                    <tr class="border-b border-gray-100 hover:bg-slate-50">
-                                        <td class="p-3 text-sm text-slate-800 truncate max-w-[200px]" title="<%= escapeHtml(kb.scraped_url) %>">
-                                            <%= escapeHtml(kb.scraped_url) %>
+                                    <tr class="hover:bg-slate-50 transition group" data-kb-id="<%= kb.id %>" data-status="<%= kb.status %>" data-job-id="<%= kb.job_id || '' %>">
+                                        <td class="p-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <p class="text-sm font-medium text-slate-800 truncate max-w-[200px] lg:max-w-[300px]" title="<%= escapeHtml(kb.scraped_url) %>">
+                                                        <%= escapeHtml(kb.scraped_url) %>
+                                                    </p>
+                                                    <p class="text-xs text-gray-500"><%= new Date(kb.created_at).toLocaleDateString() %> • <%= kb.pinecone_namespace || 'N/A' %></p>
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td class="p-3">
-                                            <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                        <td class="p-4">
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium kb-status-badge
                                                 <%= kb.status === 'success' ? 'bg-green-100 text-green-700' : 
                                                     kb.status === 'failed' ? 'bg-red-100 text-red-700' : 
+                                                    kb.status === 'processing' ? 'bg-blue-100 text-blue-700' :
                                                     'bg-yellow-100 text-yellow-700' %>">
-                                                <%= kb.status.toUpperCase() %>
+                                                <span class="w-1.5 h-1.5 rounded-full <%= kb.status === 'processing' ? 'bg-blue-600 animate-pulse' : (kb.status === 'success' ? 'bg-green-600' : (kb.status === 'failed' ? 'bg-red-600' : 'bg-yellow-600')) %>"></span>
+                                                <%= kb.status === 'processing' ? 'Processing' : kb.status.charAt(0).toUpperCase() + kb.status.slice(1) %>
                                             </span>
                                         </td>
-                                        <td class="p-3 text-sm text-gray-500"><%= new Date(kb.created_at).toLocaleDateString() %></td>
-                                        <td class="p-3 text-right flex justify-end gap-2">
-                                            <button onclick="resyncUrl('<%= encodeURIComponent(kb.scraped_url) %>')" 
-                                                    class="text-blue-600 hover:text-blue-800 text-sm font-semibold px-2 py-1 rounded hover:bg-blue-50 transition">
-                                                Resync
-                                            </button>
-                                            <button onclick="deleteKb('<%= kb.id %>')" 
-                                                    class="text-red-600 hover:text-red-800 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50 transition">
-                                                Delete
-                                            </button>
+                                        <td class="p-4">
+                                            <% if (kb.status === 'processing') { %>
+                                                <div class="w-full bg-slate-200 rounded-full h-1.5 max-w-[100px]">
+                                                    <div class="bg-blue-600 h-1.5 rounded-full animate-pulse" style="width: 45%"></div>
+                                                </div>
+                                            <% } else if (kb.status === 'success') { %>
+                                                <span class="text-xs text-green-600 font-medium">Ready</span>
+                                            <% } else if (kb.status === 'failed') { %>
+                                                <span class="text-xs text-red-600">Failed</span>
+                                            <% } else { %>
+                                                <span class="text-xs text-yellow-600">Queued</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="p-4 text-right">
+                                            <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition">
+                                                <button onclick="resyncUrl('<%= encodeURIComponent(kb.scraped_url) %>')" 
+                                                        class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Resync">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                                </button>
+                                                <button onclick="deleteKb('<%= kb.id %>')" 
+                                                        class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition" title="Delete">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 <% }); %>
@@ -109,67 +256,241 @@
                 </div>
             </div>
 
-            <!-- Enhanced Test Playground -->
-            <div class="bg-white p-6 rounded-xl shadow border border-gray-100 h-[500px] flex flex-col">
-                <div class="flex justify-between items-center mb-4">
-                    <div>
-                        <h2 class="text-lg font-bold text-slate-800">AI Test Playground</h2>
-                        <p class="text-sm text-gray-500">Test emotional states and conversation flows</p>
-                    </div>
-                    <div id="aiState" class="flex items-center gap-2 text-xs">
-                        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                        <span class="text-slate-600">Ready</span>
+            <!-- AI Test Playground -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]">
+                <div class="p-4 border-b border-gray-200 bg-gradient-to-r from-slate-50 to-white">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                                AI Test Playground
+                            </h2>
+                            <p class="text-sm text-gray-500 mt-1">Test conversation flows and emotional intelligence</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button onclick="toggleDebug()" class="text-xs font-medium text-slate-500 hover:text-blue-600 flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-100 transition">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                                Debug
+                            </button>
+                            <div id="aiState" class="flex items-center gap-2 text-xs bg-slate-100 px-3 py-1.5 rounded-full">
+                                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                <span class="text-slate-600 font-medium">Ready</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
+
                 <!-- Debug Panel -->
-                <div id="debugPanel" class="bg-slate-900 text-green-400 font-mono text-xs p-3 rounded mb-3 hidden">
-                    <div class="flex justify-between mb-2">
-                        <span>CONVERSATION STATE</span>
-                        <button onclick="toggleDebug()" class="text-slate-400 hover:text-white">×</button>
+                <div id="debugPanel" class="hidden bg-slate-900 text-green-400 font-mono text-xs p-4 border-b border-slate-700">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="font-semibold text-slate-300 uppercase tracking-wider text-[10px]">Conversation State</span>
+                        <button onclick="toggleDebug()" class="text-slate-500 hover:text-white transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
                     </div>
-                    <div id="debugContent">Phase: GREETING | Emotion: neutral | Confidence: 0.0 | Rapport: 0</div>
-                </div>
-                
-                <!-- Chat Window -->
-                <div id="testChatWindow" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3 bg-slate-50 rounded-lg border border-gray-200">
-                    <div class="bg-white border border-gray-200 text-slate-800 p-3 rounded-lg rounded-tl-none self-start max-w-[85%] shadow-sm text-sm">
-                        Hello! I'm Alex, your support consultant. I have access to all your documentation and I'm here to help. What can I do for you today?
+                    <div id="debugContent" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <span class="text-slate-500 block text-[10px] uppercase">Phase</span>
+                            <span class="text-white font-semibold">GREETING</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block text-[10px] uppercase">Emotion</span>
+                            <span class="text-yellow-400 font-semibold capitalize">neutral</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block text-[10px] uppercase">Confidence</span>
+                            <span class="text-blue-400 font-semibold">0.00</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block text-[10px] uppercase">Rapport</span>
+                            <span class="text-purple-400 font-semibold">0</span>
+                        </div>
                     </div>
                 </div>
-                
+
+                <!-- Chat Messages -->
+                <div id="testChatWindow" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+                    <div class="flex gap-3">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                            <span class="text-white text-xs font-bold">A</span>
+                        </div>
+                        <div class="bg-white border border-gray-200 text-slate-800 p-3 rounded-2xl rounded-tl-none max-w-[80%] shadow-sm text-sm leading-relaxed">
+                            Hello! I'm Alex, your support consultant. I have access to all your documentation and I'm here to help. What can I do for you today?
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Test Scenarios -->
-                <div class="flex gap-2 mt-3 overflow-x-auto pb-2">
-                    <button onclick="insertTest('angry')" class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs whitespace-nowrap hover:bg-red-200">😠 Angry</button>
-                    <button onclick="insertTest('confused')" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs whitespace-nowrap hover:bg-yellow-200">😕 Confused</button>
-                    <button onclick="insertTest('urgent')" class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs whitespace-nowrap hover:bg-orange-200">🚨 Urgent</button>
-                    <button onclick="insertTest('technical')" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs whitespace-nowrap hover:bg-blue-200">💻 Technical</button>
-                    <button onclick="toggleDebug()" class="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs whitespace-nowrap hover:bg-slate-200 ml-auto">🐛 Debug</button>
+                <div class="px-4 py-3 bg-white border-t border-gray-200">
+                    <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                        <button onclick="insertTest('angry')" class="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 rounded-full text-xs font-medium hover:bg-red-100 transition whitespace-nowrap">
+                            <span>😠</span> Frustrated
+                        </button>
+                        <button onclick="insertTest('confused')" class="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-full text-xs font-medium hover:bg-yellow-100 transition whitespace-nowrap">
+                            <span>😕</span> Confused
+                        </button>
+                        <button onclick="insertTest('urgent')" class="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full text-xs font-medium hover:bg-orange-100 transition whitespace-nowrap">
+                            <span>🚨</span> Urgent
+                        </button>
+                        <button onclick="insertTest('technical')" class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium hover:bg-blue-100 transition whitespace-nowrap">
+                            <span>💻</span> Technical
+                        </button>
+                        <button onclick="insertTest('satisfied')" class="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-medium hover:bg-green-100 transition whitespace-nowrap">
+                            <span>😊</span> Satisfied
+                        </button>
+                        <button onclick="insertTest('vague')" class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium hover:bg-gray-200 transition whitespace-nowrap">
+                            <span>❓</span> Vague
+                        </button>
+                    </div>
                 </div>
-                
-                <!-- Input -->
-                <div class="p-3 bg-white border-t border-gray-200 flex gap-2 mt-3 rounded-b-lg">
-                    <input type="text" id="testChatInput" placeholder="Test a scenario..." 
-                           class="flex-1 border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-600 outline-none text-sm"
-                           maxlength="1000">
-                    <button id="testChatBtn" class="bg-slate-900 text-white font-bold py-2 px-4 rounded hover:bg-slate-800 transition text-sm">
-                        Send
-                    </button>
+
+                <!-- Input Area -->
+                <div class="p-4 bg-white border-t border-gray-200 rounded-b-xl">
+                    <div class="flex gap-3">
+                        <div class="flex-1 relative">
+                            <input type="text" id="testChatInput" placeholder="Type a message to test the AI..." 
+                                   class="w-full border border-gray-300 pl-4 pr-12 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+                                   maxlength="1000"
+                                   autocomplete="off">
+                            <span id="charCount" class="absolute right-3 top-3 text-xs text-gray-400">0/1000</span>
+                        </div>
+                        <button id="testChatBtn" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center gap-2 active:scale-95">
+                            <span>Send</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                        </button>
+                    </div>
                 </div>
-                
+
                 <input type="hidden" id="hiddenUserId" value="<%= userId %>">
             </div>
         </div>
     </main>
 
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 transform transition-all scale-100">
+            <h3 class="text-lg font-bold text-slate-800 mb-2" id="modalTitle">Confirm Action</h3>
+            <p class="text-gray-600 mb-6" id="modalMessage">Are you sure?</p>
+            <div class="flex gap-3 justify-end">
+                <button onclick="closeModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">Cancel</button>
+                <button id="modalConfirmBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/dashboardLogic.js"></script>
     <script>
-        // Escape helper for any inline rendering
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        // Token countdown timer
+        let tokenExpiryMinutes = 59;
+        let tokenExpirySeconds = 0;
+        
+        function updateTokenTimer() {
+            const display = document.getElementById('tokenExpiry');
+            if (!display) return;
+            
+            if (tokenExpirySeconds === 0) {
+                if (tokenExpiryMinutes === 0) {
+                    display.textContent = 'Expired';
+                    display.classList.add('text-red-600');
+                    return;
+                }
+                tokenExpiryMinutes--;
+                tokenExpirySeconds = 59;
+            } else {
+                tokenExpirySeconds--;
+            }
+            
+            display.textContent = `${tokenExpiryMinutes}:${tokenExpirySeconds.toString().padStart(2, '0')}`;
         }
+        
+        setInterval(updateTokenTimer, 1000);
+        
+        // Character counter
+        const chatInput = document.getElementById('testChatInput');
+        const charCount = document.getElementById('charCount');
+        if (chatInput && charCount) {
+            chatInput.addEventListener('input', () => {
+                const len = chatInput.value.length;
+                charCount.textContent = `${len}/1000`;
+                charCount.classList.toggle('text-yellow-600', len > 900);
+                charCount.classList.toggle('text-red-600', len >= 1000);
+            });
+        }
+        
+        // Toast notification system
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-green-600',
+                error: 'bg-red-600',
+                warning: 'bg-yellow-600',
+                info: 'bg-blue-600'
+            };
+            
+            const icons = {
+                success: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
+                error: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>',
+                warning: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
+                info: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
+            };
+            
+            toast.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px] animate-fade-in`;
+            toast.innerHTML = `${icons[type]}<span class="font-medium text-sm">${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+        
+        // Make showToast globally available
+        window.showToast = showToast;
+        
+        // Modal system
+        let modalCallback = null;
+        
+        function showModal(title, message, confirmCallback) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('confirmModal').classList.remove('hidden');
+            modalCallback = confirmCallback;
+        }
+        
+        function closeModal() {
+            document.getElementById('confirmModal').classList.add('hidden');
+            modalCallback = null;
+        }
+        
+        document.getElementById('modalConfirmBtn')?.addEventListener('click', () => {
+            if (modalCallback) modalCallback();
+            closeModal();
+        });
+        
+        // Override deleteKb to use modal
+        const originalDeleteKb = window.deleteKb;
+        window.deleteKb = function(kbId) {
+            showModal(
+                'Delete Knowledge Base',
+                'This will permanently remove all vector data. The AI will no longer answer questions about this content.',
+                () => originalDeleteKb(kbId)
+            );
+        };
+        
+        // Table refresh animation
+        window.refreshTable = function() {
+            const btn = document.querySelector('button[onclick="refreshTable()"] svg');
+            btn?.classList.add('animate-spin');
+            setTimeout(() => {
+                btn?.classList.remove('animate-spin');
+                window.location.reload();
+            }, 500);
+        };
     </script>
 </body>
 </html>
