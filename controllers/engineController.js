@@ -238,17 +238,17 @@ const deleteKnowledgeBase = async (req, res) => {
 
         const targetUrl = kbResult.rows[0].scraped_url;
 
-        // Send JSON body instead of query params
-        const engineResponse = await fetch(`${pythonEngineUrl}/api/delete`, {
+        // THE FIX: Format as URL Query Parameters instead of JSON Body
+        const queryParams = new URLSearchParams({
+            url: targetUrl,
+            customer_id: customerId
+        }).toString();
+
+        const engineResponse = await fetch(`${pythonEngineUrl}/api/delete?${queryParams}`, {
             method: 'DELETE',
             headers: { 
-                'Content-Type': 'application/json',
                 'X-Service-Secret': engineSecret || ''
-            },
-            body: JSON.stringify({
-                url: targetUrl,
-                customer_id: customerId
-            })
+            }
         });
 
         if (!engineResponse.ok) {
@@ -267,9 +267,40 @@ const deleteKnowledgeBase = async (req, res) => {
     }
 };
 
+const handleWebhook = async (req, res) => {
+    const { job_id, status, data, error } = req.body;
+
+    console.log(`\n🔔 WEBHOOK RECEIVED from Python Engine`);
+    console.log(`   Job ID: ${job_id}`);
+    console.log(`   Status: ${status}`);
+    console.log('   Headers:', req.headers);
+    console.log('   Body:', req.body);
+    try {
+        // Map Python's status ('completed' or 'failed') to your DB status ('success' or 'failed')
+        const dbStatus = status === 'completed' ? 'success' : 'failed';
+        
+        const result = await pool.query(
+            `UPDATE knowledge_bases SET status = $1 WHERE job_id = $2 RETURNING id`,
+            [dbStatus, job_id]
+        );
+
+        if (result.rowCount > 0) {
+            console.log(`   ✅ Database updated successfully! KB ID: ${result.rows[0].id}`);
+        } else {
+            console.warn(`   ⚠️ Warning: Job ID ${job_id} not found in database.`);
+        }
+
+        res.status(200).json({ received: true });
+    } catch (err) {
+        console.error('❌ Webhook DB Error:', err);
+        res.status(500).json({ error: 'Database update failed' });
+    }
+};
+
 module.exports = { 
     ingestData, 
     getIngestStatus,
     chatWithEngine,
-    deleteKnowledgeBase
+    deleteKnowledgeBase,
+    handleWebhook
 };
